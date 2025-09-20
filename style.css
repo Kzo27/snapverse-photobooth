@@ -1,0 +1,19 @@
+/* style.css */
+
+.filter-btn {
+    @apply bg-gray-600 text-white text-xs font-semibold py-1 px-3 rounded-full transition-all duration-200;
+}
+
+.filter-btn:hover {
+    @apply bg-purple-500;
+}
+
+/* Kelas ini akan ditambahkan via JS saat filter aktif */
+.filter-btn.active {
+    @apply bg-purple-600 ring-2 ring-purple-400;
+}
+
+/* Kelas untuk animasi modal */
+#permission-modal.visible #modal-content {
+    @apply scale-100 opacity-100;
+}

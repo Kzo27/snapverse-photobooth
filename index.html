@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapVerse - Photobooth Masa Depan</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4 font-sans">
+    
+    <!-- Kontainer Utama Aplikasi -->
+    <div class="container mx-auto bg-gray-800 rounded-lg shadow-xl p-8 max-w-6xl w-full">
+        <h1 class="text-4xl font-bold text-center mb-8 tracking-wider">SnapVerse</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- KOLOM KIRI: Tampilan Kamera -->
+            <div class="flex flex-col">
+                <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden border-2 border-purple-600 shadow-lg">
+                    <video id="webcam-feed" class="w-full h-full object-cover transform scale-x-[-1] hidden" autoplay playsinline></video>
+                    <canvas id="output-canvas" class="w-full h-full object-cover transform scale-x-[-1]"></canvas>
+                    <canvas id="hidden-canvas" class="hidden"></canvas>
+                    <div id="countdown-overlay" class="absolute inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-10">
+                        <span id="countdown-text" class="text-9xl font-bold text-white" style="text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KOLOM KANAN: Panel Kontrol & Galeri -->
+            <div class="flex flex-col space-y-4">
+                <div class="bg-gray-700/50 p-4 rounded-lg text-center">
+                    <label for="camera-select" class="block text-sm text-gray-400 mb-2">Pilih Kamera:</label>
+                    <select id="camera-select" class="bg-gray-900 border border-gray-600 rounded-md py-1 px-2 text-sm w-full max-w-xs mx-auto"></select>
+                    <div class="mt-6">
+                        <button id="capture-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                            📸 Ambil Foto
+                        </button>
+                    </div>
+                </div>
+                <div id="filter-container" class="bg-gray-700/50 p-4 rounded-lg">
+                    <h3 class="text-center text-sm font-bold text-gray-300 mb-3 tracking-wide">PILIH FILTER</h3>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button class="filter-btn" data-filter="none">Normal</button>
+                        <button class="filter-btn" data-filter="grayscale(100%)">Grayscale</button>
+                        <button class="filter-btn" data-filter="sepia(100%)">Sepia</button>
+                        <button class="filter-btn" data-filter="invert(100%)">Invert</button>
+                    </div>
+                </div>
+                <!-- Panel Ganti Background -->
+                <div class="bg-gray-700/50 p-4 rounded-lg">
+                    <h3 class="text-center text-sm font-bold text-gray-300 mb-3 tracking-wide">GANTI BACKGROUND</h3>
+                    <div class="flex justify-center mb-3">
+                        <button id="toggle-background-btn" class="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold py-1 px-3 rounded-full transition-colors">
+                            Aktifkan Efek
+                        </button>
+                    </div>
+                    <!-- ================== PERUBAHAN ADA DI DALAM DIV INI ================== -->
+                    <div id="background-options" class="flex flex-wrap justify-center gap-2 hidden">
+                        <!-- Tombol Upload Baru -->
+                        <label for="upload-bg-input" class="background-img h-16 w-16 flex flex-col items-center justify-center bg-gray-600 rounded-md cursor-pointer border-2 border-transparent hover:border-purple-500" title="Unggah Gambar">
+                            <svg xmlns="http://www.w.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <span class="text-xs mt-1">Unggah</span>
+                        </label>
+                        <input type="file" id="upload-bg-input" class="hidden" accept="image/png, image/jpeg">
+
+                        <!-- Opsi Default yang Sudah Ada -->
+                        <img src="https://picsum.photos/id/1015/400/600" alt="Background Gunung" class="background-img h-16 w-16 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-purple-500" crossorigin="anonymous">
+                        <img src="https://picsum.photos/id/10/400/600" alt="Background Pantai" class="background-img h-16 w-16 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-purple-500" crossorigin="anonymous">
+                        <img src="https://picsum.photos/id/1025/400/600" alt="Background Perkotaan" class="background-img h-16 w-16 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-purple-500" crossorigin="anonymous">
+                        <div id="blur-bg" class="background-img h-16 w-16 flex items-center justify-center bg-gray-600 rounded-md cursor-pointer border-2 border-transparent hover:border-purple-500" title="Blur Background">
+                            <span class="text-xs font-bold">BLUR</span>
+                        </div>
+                    </div>
+                    <!-- ======================================================================= -->
+                </div>
+                <div id="photo-preview-container" class="bg-gray-900/50 rounded-lg p-4 flex-grow min-h-[200px] overflow-y-auto">
+                    <div id="photo-preview-area" class="grid grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Notifikasi Izin Kamera -->
+    <div id="permission-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 max-w-sm w-full text-center transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Selamat Datang di SnapVerse!</h2>
+            <p class="text-gray-400 mb-6">Untuk memulai, kami memerlukan izin untuk mengakses kamera Anda. Kami tidak merekam atau menyimpan data apa pun tanpa persetujuan Anda.</p>
+            <button id="grant-permission-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg w-full">
+                Izinkan Akses Kamera
+            </button>
+        </div>
+    </div>
+
+    <!-- Indikator Loading -->
+    <div id="loading-overlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90">
+        <svg class="animate-spin h-12 w-12 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p id="loading-text" class="mt-4 text-lg text-gray-300">Memuat Model AI...</p>
+    </div>
+
+    <!-- Script utama diletakkan paling akhir -->
+    <script src="script.js"></script>
+</body>
+</html>
+

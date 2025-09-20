@@ -1,2 +1,0 @@
-# snapverse-photobooth
-snapverse photobooth
